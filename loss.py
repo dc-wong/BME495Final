@@ -66,8 +66,8 @@ class MultiLoss(nn.Module):
         Returns:
         Scalar loss averaged across all channels and batches.
         """
-        target = F.interpolate(target, size=preds.shape[2:], mode='trilinear', align_corners=False)
-        target = target.expand_as(preds)  # Expand to (B, C, D, H, W)
+        # target = F.interpolate(target, size=preds.shape[2:], mode='trilinear', align_corners=False)
+        target = target.expand(-1, preds[1], -1, -1, -1)  # Expand to (B, C, D, H, W)
 
         loss = self.dice_tversky_loss(preds, target)  # Scalar loss
         return loss
