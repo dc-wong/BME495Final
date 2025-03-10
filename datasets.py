@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import nibabel as nib
-
+from tqdm import tqdm
 import torchio as tio
 from torchio import SubjectsDataset, SubjectsLoader
 
@@ -19,7 +19,7 @@ class TransformedDataset(tio.SubjectsDataset):
         assert len(self.image_files) == len(self.label_files), "Mismatch between images and labels"
 
         subjects = []
-        for img_file, label_file in zip(self.image_files, self.label_files):
+        for img_file, label_file in tqdm(zip(self.image_files, self.label_files)):
             img_path = os.path.join(self.image_dir, img_file)
             label_path = os.path.join(self.label_dir, label_file)
 
