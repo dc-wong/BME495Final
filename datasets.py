@@ -29,15 +29,18 @@ class TransformedDataset(tio.SubjectsDataset):
             )
             if self.transform:
                 subject = self.transform(subject)
-            affine = np.eye(4)
-            affine[:3,:3] = np.diag(subject['image'].spacing)
-            affine[:3,3] = subject['image'].affine[:3, 3]
-            resample_transform = tio.Resample(target = (self.target_shape, affine), image_interpolation = 'bspline', label_interpolation = 'nearest')
-            subject['image'] = resample_transform(subject['image'])
+            #affine = np.eye(4)
+            #affine[:3,:3] = np.diag(subject['image'].spacing)
+            #affine[:3,3] = subject['image'].affine[:3, 3]
+            #resample_transform = tio.Resample(target = (self.target_shape, affine), image_interpolation = 'bspline', label_interpolation = 'label_gaussian')
+            #subject['image'] = resample_transform(subject['image'])
             #resample_transform_label = tio.Resample(target = subject['image'], label_interpolation = 'nearest')
-            subject['label'] = resample_transform(subject['label'])
+            #subject['label'] = resample_transform(subject['label'])
+            #print(subject['label'].data.unique())
+            #subject['label'].set_data((subject['label'].data > 0.5).float())
             #print(subject['image'].shape, subject['label'].shape)
-            assert subject['image'].shape == (1, 400, 400, 32), "Mismatch shape after transform"
+            #assert torch.equal(subject['label'].data.unique(), torch.tensor([0,1]).float()), "Labels missing labels 3"
+            #assert subject['image'].shape == (1, 400, 400, 32), "Mismatch shape after transform"
             subjects.append(subject)
 
         super().__init__(subjects)  # Initialize properly
