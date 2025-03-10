@@ -3,24 +3,24 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.checkpoint import checkpoint
 
-class Seperable(nn.Module):
+class Separable(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size = 3, padding = 1):
         super().__init__()
         self.depthwise = nn.Conv3d(in_channels=in_channels, out_channels=in_channels, kernel_size=kernel_size, groups=in_channels, padding=padding)
         self.pointwise = nn.Conv3d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, bias=False)
 
     def forward(self, x):
-        x = checkpoint(self.depthwise, x, use_reentrant=False)
-        x = checkpoint(self.pointwise, x, use_reentrant=False)
-        #x = self.pointwise(self.depthwise(x))
+        #x = checkpoint(self.depthwise, x, use_reentrant=False)
+        #x = checkpoint(self.pointwise, x, use_reentrant=False)
+        x = self.pointwise(self.depthwise(x))
         return x
 
 class ConvSet(nn.Module):
     def __init__(self, in_channels, middle_channels, out_channels, dropout_prob=0.5):
         super().__init__()
-        self.conv1 = Seperable(in_channels = in_channels, out_channels = middle_channels)
-        self.conv2 = Seperable(in_channels = middle_channels, out_channels = out_channels)
-        self.dropout = nn.Dropout(p=dropout_prob)
+        self.conv1 = Separable(in_channels = in_channels, out_channels = middle_channels)
+        self.conv2 = Separable(in_channels = middle_channels, out_channels = out_channels)
+        self.dropout = nn.Dropout3d(p=dropout_prob)
         self.relu = nn.LeakyReLU()
         self.batchnorm = nn.BatchNorm3d(out_channels)
     
@@ -115,7 +115,7 @@ class MainModel(nn.Module):
     
 
 class MultiModel(nn.Module):
-    def __init__(self, dropout_prob=0.8):
+    def __init__(self, dropout_prob=0.5):
         super().__init__()
         z = 16
         self.scale = 2
@@ -130,7 +130,7 @@ class MultiModel(nn.Module):
         self.deconv2 = ConvSet(12 * z, 4 * z, 4 * z)
         self.deconv3 = ConvSet(6 * z, 2 * z, 2 * z)
         
-        self.last = Seperable(in_channels = 2 * z, out_channels = 1, kernel_size = 1, padding=0) #should be 2*z, but we are just testing to see if it can learn
+        self.last = Separable(in_channels = 2 * z, out_channels = 1, kernel_size = 1, padding=0) #should be 2*z, but we are just testing to see if it can learn
         self.output = nn.Sigmoid()
     
     def forward(self, x):
@@ -152,5 +152,5 @@ class MultiModel(nn.Module):
         y = self.deconv3(torch.cat((x1, y), dim = 1))
 
         y = self.last(y)
-        y =  self.output(y)
+        y = self.output(y)
         return y

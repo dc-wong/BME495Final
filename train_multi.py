@@ -46,10 +46,9 @@ del output
 torch.cuda.empty_cache()
 
 transform = tio.Compose([
-    tio.CropOrPad((320, 320, 32), padding_mode = 0, include=['image','label']),
     #tio.ZNormalization(include=['image']),  # Normalize intensity only on the image
-    #tio.RandomAffine(scales=(0.9, 1.1), degrees=10, translation=(5, 5, 5), include=['image','label']),  # Apply only to the image
-    #tio.RandomElasticDeformation(num_control_points=7, max_displacement=5, p=0.5, include=['image','label']),  # Elastic transform
+    tio.RandomAffine(scales=(0.9, 1.1), degrees=10, translation=(5, 5, 5), include=['image','label']),  # Apply only to the image
+    tio.RandomElasticDeformation(num_control_points=7, max_displacement=5, p=0.5, include=['image','label']),  # Elastic transform
     #tio.RandomFlip(axes=(0, 1, 2), p=0.5, include=['image','label'])  # Flip along random axes
 ])
 
@@ -140,8 +139,8 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25, best_acc=
 
                 # statistics
                 running_loss += loss.item() * inputs.size(0)
-
-                running_corrects += MultiAccuracy(outputs, labels.data)
+                with torch.no_grad():
+                    running_corrects += MultiAccuracy(outputs, labels.data)
                 del inputs, labels, loss, outputs
                 torch.cuda.empty_cache()  # Free unused GPU memory
 
@@ -173,9 +172,9 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25, best_acc=
 ### Why cross entropy loss?
 criterion = MultiLoss()
 ### SGD, Adam, RMSprop, ... AdamW
-optimizer = optim.AdamW(model.parameters(), lr=0.0001, weight_decay=1e-4)
+optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-4)
 ### decay learning rate
-exp_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=2, factor=0.2)
+exp_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=10, threshold= 1e-3, factor=0.999)
 
 
 best_acc = float(os.getenv('MULTI_BEST_ACC', 0))
