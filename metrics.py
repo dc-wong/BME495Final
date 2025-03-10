@@ -3,36 +3,33 @@ import torch.nn.functional as F
 
 def JaccardIndex(preds, target, smooth=1e-6):
     """ Computes Jaccard Index (IoU) per channel, then averages over channels and batch. """
-    target = target.long()
     
-    intersection = torch.logical_and(preds, target).sum(dim=(2,3,4))  # Sum over spatial dims
-    union = torch.logical_or(preds, target).sum(dim=(2,3,4)) 
+    intersection = (preds * target).sum(dim=(2,3,4))  # Sum over spatial dims
+    union = (preds * target).sum(dim=(2,3,4)) 
     
     iou = (intersection + smooth) / (union + smooth)  # Avoid division by zero
     return iou.mean(dim=1).mean()  # Mean over channels, then batch
 
 def Dice(preds, target, smooth=1e-6):
     """ Computes Dice Coefficient per channel, then averages over channels and batch. """
-    preds = preds.float()
-    target = target.float()
 
-    intersection = torch.logical_and(preds, target).sum(dim=(2,3,4))
+    intersection = (preds * target).sum(dim=(2,3,4))
     dice = (2 * intersection + smooth) / (preds.sum(dim=(2,3,4)) + target.sum(dim=(2,3,4)) + smooth)
     
     return dice.mean(dim=1).mean()  # Mean over channels, then batch
 
 def Precision(preds, target, smooth=1e-6):
     """ Computes Precision per channel, then averages over channels and batch. """
-    tp = torch.logical_and(preds, target).sum(dim=(2,3,4)).float()
-    fp = torch.logical_and(preds, torch.logical_not(target)).sum(dim=(2,3,4)).float()
+    tp = (preds * target).sum(dim=(2,3,4)).float()
+    fp = (preds * -target).sum(dim=(2,3,4)).float()
     
     precision = (tp + smooth) / (tp + fp + smooth)
     return precision.mean(dim=1).mean()  # Mean over channels, then batch
 
 def Recall(preds, target, smooth=1e-6):
     """ Computes Recall per channel, then averages over channels and batch. """
-    tp = torch.logical_and(preds, target).sum(dim=(2,3,4)).float()
-    fn = torch.logical_and(torch.logical_not(preds), target).sum(dim=(2,3,4)).float()
+    tp = (preds * target).sum(dim=(2,3,4)).float()
+    fn = (-preds* target).sum(dim=(2,3,4)).float()
     
     recall = (tp + smooth) / (tp + fn + smooth)
     return recall.mean(dim=1).mean()  # Mean over channels, then batch
@@ -61,17 +58,18 @@ def MultiAccuracy(preds, target, weights=None):
     Computes a weighted accuracy score per channel, then averages over channels and batch.
     Handles multi-channel predictions by thresholding and mean pooling.
     """
+    return torch.tensor(0.0)
     if weights is None:
         weights = torch.Tensor([0.25, 0.25, 0.25, 0.25])
     device = preds.device
     weights = weights.to(device)
 
     # Ensure target has the same shape as predictions
-    target = target.expand_as(preds)
+    target = target.expand(-1, preds.shape[1], -1, -1, -1)
 
     # Mean pool over channels and threshold predictions
-    preds = MeanPoolOverChannels(preds)
-    preds = (preds > 0.5).long()
+    # preds = MeanPoolOverChannels(preds)
+    # preds = (preds > 0.5).long()
 
     # Compute metrics
     J = JaccardIndex(preds, target)
