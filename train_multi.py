@@ -38,9 +38,10 @@ model.to(device)
 
 
 
-test_image = torch.rand(1, 1, 400, 400, 32).to(device)
+test_image = torch.rand(1, 1, 128, 128, 16).to(device)
 output = model(test_image)
 print(output.shape)
+print(output.min(), output.max())
 del output
 torch.cuda.empty_cache()
 
@@ -52,11 +53,22 @@ transform = tio.Compose([
 ])
 
 trainset = TransformedDataset(image_dir = os.path.abspath("Cirrhosis_T2_3D/train_images"), label_dir = os.path.abspath("Cirrhosis_T2_3D/train_masks"),  transform=transform)
-train_loader = tio.SubjectsLoader(trainset, batch_size = 4, shuffle = True) # batch size is 1 because of varying sizes of MRI
 # testset = TransformedDataset(image_dir = r"C:\PROJECTS\BME495\FinalProject\Cirrhosis_T2_3D\test_images", label_dir = r"C:\PROJECTS\BME495\FinalProject\Cirrhosis_T2_3D\test_masks",  transform=transform)
 # test_loader = torch.utils.data.DataLoader(testset, batch_size = 1, shuffle = True) # batch size is 1 because of varying sizes of MRI
 valset = TransformedDataset(image_dir = os.path.abspath("Cirrhosis_T2_3D/valid_images"), label_dir = os.path.abspath("Cirrhosis_T2_3D/valid_masks"),  transform=transform)
-val_loader = tio.SubjectsLoader(valset, batch_size = 4, shuffle = True) # batch size is 1 because of varying sizes of MRI
+
+sampler = tio.LabelSampler(patch_size = (128, 128, 16), label_name='label', label_probabilities={0:0.05,1:0.95})
+
+train_queue = tio.Queue(subjects_dataset=trainset, max_length=1200, samples_per_volume=4, sampler=sampler, shuffle_subjects=True, shuffle_patches=True)
+val_queue = tio.Queue(subjects_dataset=valset, max_length=300, samples_per_volume=4, sampler=sampler, shuffle_subjects=True, shuffle_patches=True)
+#train_loader = torch.utils.data.DataLoader(train_queue, batch_size = 4)
+train_loader = tio.SubjectsLoader(train_queue, batch_size = 16, shuffle = True)
+#val_loader = torch.utils.data.DataLoader(val_queue, batch_size = 4)
+val_loader = tio.SubjectsLoader(val_queue, batch_size = 16, shuffle = True)
+#train_loader = tio.SubjectsLoader(trainset, batch_size = 4, shuffle = True) # batch size is 1 because of varying sizes of MRI
+#val_loader = tio.SubjectsLoader(valset, batch_size = 4, shuffle = True) # batch size is 1 because of varying sizes of MRI
+
+
 
 dataloaders = {"train": train_loader, "val": val_loader}
 
@@ -65,7 +77,9 @@ for batch in train_loader:
     inputs = batch['image'][tio.DATA]  # Extract tensor from Subject
     labels = batch['label'][tio.DATA] # Extract tensor from Subject
     print("Image batch shape:", inputs.shape)
+    print("Image batch range:", inputs.min(), inputs.max())
     print("Label batch shape:", labels.shape)
+    print("Label batch unique values:", labels.unique())
     break
 
 
@@ -74,7 +88,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25, best_acc=
     best_model_params_path = os.path.join('weights', 'best_multi_model_params.pt')
 
     torch.save(model.state_dict(), best_model_params_path)
-
+    scaler = torch.amp.GradScaler("cuda")
     for epoch in range(num_epochs):
         print(f'Epoch {epoch}/{num_epochs - 1}')
         print('-' * 10)
@@ -98,10 +112,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25, best_acc=
                 # labels = labels.to(device)
                 inputs = batch['image'][tio.DATA].to(device)  # Extract tensor from Subject
                 labels = batch['label'][tio.DATA].to(device)  # Extract tensor from Subject
-                if inputs.shape[-1] > 64:
-                    print('skipped', inputs.shape)
-                    continue
-                scaler = torch.amp.GradScaler("cuda")
+                
                 # # zero the parameter gradients
                 # optimizer.zero_grad()
 
@@ -158,18 +169,10 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25, best_acc=
     return model
 
 
-
-
-
-
-
-
-
-
 ### Why cross entropy loss?
 criterion = MultiLoss()
 ### SGD, Adam, RMSprop, ... AdamW
-optimizer = optim.AdamW(model.parameters(), lr=0.0005, weight_decay=1e-4)
+optimizer = optim.AdamW(model.parameters(), lr=0.001, weight_decay=1e-4)
 ### decay learning rate
 exp_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=3, factor=0.2)
 
@@ -177,4 +180,4 @@ exp_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='m
 best_acc = float(os.getenv('MULTI_BEST_ACC', 0))
 print(best_acc)
 
-model = train_model(model, criterion, optimizer, exp_lr_scheduler, num_epochs=100, best_acc=best_acc)
+model = train_model(model, criterion, optimizer, exp_lr_scheduler, num_epochs=500, best_acc=best_acc)
