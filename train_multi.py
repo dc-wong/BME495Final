@@ -46,7 +46,7 @@ del output
 torch.cuda.empty_cache()
 
 transform = tio.Compose([
-    tio.CropOrPad((320, 320, 32), padding_mode = 0, mask_name = 'label', include=['image','label']),
+    tio.CropOrPad((320, 320, 32), padding_mode = 0, include=['image','label']),
     tio.ZNormalization(include=['image']),  # Normalize intensity only on the image
     tio.RandomAffine(scales=(0.9, 1.1), degrees=10, translation=(5, 5, 5), include=['image','label']),  # Apply only to the image
     tio.RandomElasticDeformation(num_control_points=7, max_displacement=5, p=0.5, include=['image','label']),  # Elastic transform
@@ -104,7 +104,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25, best_acc=
             running_corrects = 0
 
             # zero the parameter gradients
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
 
             # # Iterate over data.
             # accumulation_steps = 10
@@ -115,7 +115,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25, best_acc=
                 labels = batch['label'][tio.DATA].to(device)  # Extract tensor from Subject
                 
                 # # zero the parameter gradients
-                # optimizer.zero_grad()
+                optimizer.zero_grad()
 
                 # forward
                 # track history if only in train
@@ -148,7 +148,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25, best_acc=
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
 
-            if phase == 'train':
+            if phase == 'val':
                 scheduler.step(epoch_loss)
                 print(scheduler.get_last_lr())
 
@@ -173,7 +173,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25, best_acc=
 ### Why cross entropy loss?
 criterion = MultiLoss()
 ### SGD, Adam, RMSprop, ... AdamW
-optimizer = optim.AdamW(model.parameters(), lr=0.0001, weight_decay=1e-4)
+optimizer = optim.AdamW(model.parameters(), lr=0.0005, weight_decay=1e-4)
 ### decay learning rate
 exp_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=3, factor=0.2)
 
