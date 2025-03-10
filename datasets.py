@@ -8,12 +8,13 @@ import torchio as tio
 from torchio import SubjectsDataset, SubjectsLoader
 
 class TransformedDataset(tio.SubjectsDataset):
-    def __init__(self, image_dir, label_dir, target_shape = (400, 400, 32), transform=None):
+    def __init__(self, image_dir, label_dir, target_shape = (320, 320, 32), transform=None):
         self.image_dir = image_dir
         self.label_dir = label_dir
         self.image_files = sorted(os.listdir(image_dir))
         self.label_files = sorted(os.listdir(label_dir))
         self.transform = transform
+        self.cropOrPad = tio.CropOrPad(target_shape, padding_mode = 0, include  = ('image', 'label'))
         self.target_shape = target_shape
 
         assert len(self.image_files) == len(self.label_files), "Mismatch between images and labels"
@@ -27,9 +28,8 @@ class TransformedDataset(tio.SubjectsDataset):
                 image=tio.ScalarImage(img_path),
                 label=tio.LabelMap(label_path)
             )
-            if self.transform:
-                subject = self.transform(subject)
-            #affine = np.eye(4)
+            subject = self.cropOrPad(subject)
+           #affine = np.eye(4)
             #affine[:3,:3] = np.diag(subject['image'].spacing)
             #affine[:3,3] = subject['image'].affine[:3, 3]
             #resample_transform = tio.Resample(target = (self.target_shape, affine), image_interpolation = 'bspline', label_interpolation = 'label_gaussian')
@@ -47,4 +47,5 @@ class TransformedDataset(tio.SubjectsDataset):
 
     def __getitem__(self, idx):
         subject = super().__getitem__(idx)  # Ensure transformation returns a `tio.Subject`)
+        subject = self.transform(subject)
         return subject

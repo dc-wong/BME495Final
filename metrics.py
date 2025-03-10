@@ -50,14 +50,12 @@ def MultiAccuracy(preds, target, weights=None):
     """
     if weights is None:
         weights = torch.Tensor([0.25, 0.25, 0.25, 0.25])
-    preds.no_grad()
     device = preds.device
     weights = weights.to(device)
-    weights.no_grad()
-    target.no_grad()
+    
     
     # Ensure target has the same shape as preds
-    target = target.exapnd(-1, preds[1], -1, -1, -1)
+    target = target.expand(-1, preds.shape[1], -1, -1, -1)
     # Threshold predictions to obtain binary outputs
     preds_thresh = (preds > 0.5).float()
     
