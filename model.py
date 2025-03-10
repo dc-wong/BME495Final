@@ -115,17 +115,18 @@ class MainModel(nn.Module):
     
 
 class MultiModel(nn.Module):
-    def __init__(self, dropout_prob=0.5):
+    def __init__(self, dropout_prob=0.8):
         super().__init__()
-        z = 16
+        z = 24
+        self.scale = 2
         self.conv1 = ConvSet(1, z, 2 * z)
         self.conv2 = ConvSet(2 * z, 2 * z, 4 * z)
         self.conv3 = ConvSet(4 * z, 4 * z, 8 * z)
-        #self.conv4 = ConvSet(8 * z, 8 * z, 16 * z)
+        self.conv4 = ConvSet(8 * z, 8 * z, 16 * z)
 
-        self.maxPool = nn.MaxPool3d(kernel_size = 4, stride = 4)
+        self.maxPool = nn.MaxPool3d(kernel_size = self.scale, stride = self.scale)
 
-        #self.deconv1 = ConvSet(24 * z, 8 * z, 8 * z)
+        self.deconv1 = ConvSet(24 * z, 8 * z, 8 * z)
         self.deconv2 = ConvSet(12 * z, 4 * z, 4 * z)
         self.deconv3 = ConvSet(6 * z, 2 * z, 2 * z)
         
@@ -137,17 +138,17 @@ class MultiModel(nn.Module):
         x2 = self.maxPool(x1)
         x2 = self.conv2(x2)
         x3 = self.maxPool(x2)
-        y = self.conv3(x3)
-        #y = self.maxPool(x3)
-        #y = self.conv4(y)
+        x3 = self.conv3(x3)
+        y = self.maxPool(x3)
+        y = self.conv4(y)
 
-        #y = F.interpolate(y, scale_factor = 2)
-        #y = self.deconv1(torch.cat((x3, y), dim = 1))
+        y = F.interpolate(y, scale_factor = self.scale)
+        y = self.deconv1(torch.cat((x3, y), dim = 1))
 
-        y = F.interpolate(y, scale_factor = 4)
+        y = F.interpolate(y, scale_factor = self.scale)
         y = self.deconv2(torch.cat((x2, y), dim = 1))
 
-        y = F.interpolate(y, scale_factor = 4)
+        y = F.interpolate(y, scale_factor = self.scale)
         y = self.deconv3(torch.cat((x1, y), dim = 1))
 
         y = self.last(y)
