@@ -130,7 +130,7 @@ class MultiModel(nn.Module):
         self.deconv2 = ConvSet(12 * z, 4 * z, 4 * z)
         self.deconv3 = ConvSet(6 * z, 2 * z, 2 * z)
         
-        self.last = Seperable(in_channels = 2 * z, out_channels = 2 * z, kernel_size = 1, padding=0)
+        self.last = Seperable(in_channels = 2 * z, out_channels = 1, kernel_size = 1, padding=0) #should be 2*z, but we are just testing to see if it can learn
         self.output = nn.Sigmoid()
     
     def forward(self, x):
