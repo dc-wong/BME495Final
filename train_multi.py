@@ -38,7 +38,7 @@ model.to(device)
 
 
 
-test_image = torch.rand(1, 1, 128, 128, 16).to(device)
+test_image = torch.rand(4, 1, 320, 320, 32).to(device)
 output = model(test_image)
 print(output.shape)
 print(output.min(), output.max())
@@ -46,6 +46,7 @@ del output
 torch.cuda.empty_cache()
 
 transform = tio.Compose([
+    tio.CropOrPad((320, 320, 32), padding_mode = 0, mask_name = 'label', include=['image','label']),
     tio.ZNormalization(include=['image']),  # Normalize intensity only on the image
     tio.RandomAffine(scales=(0.9, 1.1), degrees=10, translation=(5, 5, 5), include=['image','label']),  # Apply only to the image
     tio.RandomElasticDeformation(num_control_points=7, max_displacement=5, p=0.5, include=['image','label']),  # Elastic transform
@@ -57,16 +58,16 @@ trainset = TransformedDataset(image_dir = os.path.abspath("Cirrhosis_T2_3D/train
 # test_loader = torch.utils.data.DataLoader(testset, batch_size = 1, shuffle = True) # batch size is 1 because of varying sizes of MRI
 valset = TransformedDataset(image_dir = os.path.abspath("Cirrhosis_T2_3D/valid_images"), label_dir = os.path.abspath("Cirrhosis_T2_3D/valid_masks"),  transform=transform)
 
-sampler = tio.LabelSampler(patch_size = (128, 128, 16), label_name='label', label_probabilities={0:0.05,1:0.95})
+#sampler = tio.LabelSampler(patch_size = (128, 128, 16), label_name='label', label_probabilities={0:0.05,1:0.95})
 
-train_queue = tio.Queue(subjects_dataset=trainset, max_length=1200, samples_per_volume=4, sampler=sampler, shuffle_subjects=True, shuffle_patches=True)
-val_queue = tio.Queue(subjects_dataset=valset, max_length=300, samples_per_volume=4, sampler=sampler, shuffle_subjects=True, shuffle_patches=True)
+#train_queue = tio.Queue(subjects_dataset=trainset, max_length=1200, samples_per_volume=4, sampler=sampler, shuffle_subjects=True, shuffle_patches=True)
+#val_queue = tio.Queue(subjects_dataset=valset, max_length=300, samples_per_volume=4, sampler=sampler, shuffle_subjects=True, shuffle_patches=True)
 #train_loader = torch.utils.data.DataLoader(train_queue, batch_size = 4)
-train_loader = tio.SubjectsLoader(train_queue, batch_size = 16, shuffle = True)
+#train_loader = tio.SubjectsLoader(train_queue, batch_size = 16, shuffle = True)
 #val_loader = torch.utils.data.DataLoader(val_queue, batch_size = 4)
-val_loader = tio.SubjectsLoader(val_queue, batch_size = 16, shuffle = True)
-#train_loader = tio.SubjectsLoader(trainset, batch_size = 4, shuffle = True) # batch size is 1 because of varying sizes of MRI
-#val_loader = tio.SubjectsLoader(valset, batch_size = 4, shuffle = True) # batch size is 1 because of varying sizes of MRI
+#val_loader = tio.SubjectsLoader(val_queue, batch_size = 16, shuffle = True)
+train_loader = tio.SubjectsLoader(trainset, batch_size = 4, shuffle = True) # batch size is 1 because of varying sizes of MRI
+val_loader = tio.SubjectsLoader(valset, batch_size = 4, shuffle = True) # batch size is 1 because of varying sizes of MRI
 
 
 
@@ -172,7 +173,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25, best_acc=
 ### Why cross entropy loss?
 criterion = MultiLoss()
 ### SGD, Adam, RMSprop, ... AdamW
-optimizer = optim.AdamW(model.parameters(), lr=0.001, weight_decay=1e-4)
+optimizer = optim.AdamW(model.parameters(), lr=0.0001, weight_decay=1e-4)
 ### decay learning rate
 exp_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=3, factor=0.2)
 
