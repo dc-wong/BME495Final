@@ -117,7 +117,7 @@ class MainModel(nn.Module):
 class MultiModel(nn.Module):
     def __init__(self, dropout_prob=0.5):
         super().__init__()
-        z = 16
+        z = 32
         self.scale = 2
         self.conv1 = ConvSet(1, z, 2 * z)
         self.conv2 = ConvSet(2 * z, 2 * z, 4 * z)
