@@ -47,8 +47,9 @@ torch.cuda.empty_cache()
 
 transform = tio.Compose([
     #tio.ZNormalization(include=['image']),  # Normalize intensity only on the image
-    tio.RandomAffine(scales=(0.9, 1.1), degrees=10, translation=(5, 5, 5), include=['image','label']),  # Apply only to the image
-    tio.RandomElasticDeformation(num_control_points=7, max_displacement=5, p=0.5, include=['image','label']),  # Elastic transform
+    tio.RandomAffine(scales=(0.9, 1.1), degrees=10, translation=(10, 10, 10), include=['image','label']),  # Apply only to the image
+    tio.RandomElasticDeformation(num_control_points=8, max_displacement=4, locked_borders=2, p=0.5, include=['image','label']),  # Elastic transform
+    tio.RandomBiasField(coefficients = 0.5, order = 3),
     #tio.RandomFlip(axes=(0, 1, 2), p=0.5, include=['image','label'])  # Flip along random axes
 ])
 
