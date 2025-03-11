@@ -87,7 +87,7 @@ for batch in train_loader:
 def train_model(model, criterion, optimizer, num_epochs=25): #scheduler
     # Create a temporary directory to save training checkpoints
     best_model_params_path = os.path.join('weights', 'base_3d_unet.pt')
-
+    best_acc = 0.0
     torch.save(model.state_dict(), best_model_params_path)
     scaler = torch.amp.GradScaler("cuda")
     for epoch in range(num_epochs):
