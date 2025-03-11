@@ -84,9 +84,9 @@ for batch in train_loader:
     break
 
 
-def train_model(model, criterion, optimizer, scheduler, num_epochs=25, best_acc=0.0):
+def train_model(model, criterion, optimizer, num_epochs=25): #scheduler
     # Create a temporary directory to save training checkpoints
-    best_model_params_path = os.path.join('weights', 'best_multi_model_params.pt')
+    best_model_params_path = os.path.join('weights', 'base_3d_unet.pt')
 
     torch.save(model.state_dict(), best_model_params_path)
     scaler = torch.amp.GradScaler("cuda")
@@ -148,9 +148,9 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25, best_acc=
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
 
-            if phase == 'val':
-                scheduler.step(epoch_loss)
-                print(scheduler.get_last_lr())
+            #if phase == 'val':
+                #scheduler.step(epoch_loss)
+                #print(scheduler.get_last_lr())
 
             print(f'{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
 
@@ -163,8 +163,6 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25, best_acc=
         print()
 
     print(f'Best val acc: {best_acc:4f}')
-    with open(".env", "w") as f:
-        f.write(f"MULTI_BEST_ACC=\"{best_acc:.4f}\"")
     # load best model weights
     model.load_state_dict(torch.load(best_model_params_path))
     return model
@@ -175,10 +173,6 @@ criterion = MultiLoss()
 ### SGD, Adam, RMSprop, ... AdamW
 optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-4)
 ### decay learning rate
-exp_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=10, threshold= 1e-3, factor=0.999)
+#exp_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=10, threshold= 1e-3, factor=0.999)
 
-
-best_acc = float(os.getenv('MULTI_BEST_ACC', 0))
-print(best_acc)
-
-model = train_model(model, criterion, optimizer, exp_lr_scheduler, num_epochs=500, best_acc=best_acc)
+model = train_model(model, criterion, optimizer, num_epochs=1000) # exp_lr_scheduler
