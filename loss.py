@@ -40,7 +40,8 @@ class ChannelWiseBCELoss(nn.Module):
         super().__init__()
     
     def forward(self, preds, target):
-        BCEloss = F.binary_cross_entropy(preds, target, reduction='none').sum(dim=(2, 3, 4)).mean(dim=1).mean()
+        with torch.cuda.amp.autocast(enabled=False):
+            BCEloss = F.binary_cross_entropy(preds, target, reduction='none').sum(dim=(2, 3, 4)).mean(dim=1).mean()
         return BCEloss
 
 
