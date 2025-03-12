@@ -84,9 +84,11 @@ for batch in train_loader:
     break
 
 
-def train_model(model, criterion, optimizer, num_epochs=25): #scheduler
+def train_model(model, criterion, optimizer, num_epochs=25, continue_training = False): #scheduler
     # Create a temporary directory to save training checkpoints
     best_model_params_path = os.path.join('weights', 'base_3d_unet.pt')
+    if continue_training:
+        model.load_state_dict(torch.load(best_model_params_path, weights_only=True))
     best_acc = 0.0
     torch.save(model.state_dict(), best_model_params_path)
     scaler = torch.amp.GradScaler("cuda")
@@ -156,7 +158,7 @@ def train_model(model, criterion, optimizer, num_epochs=25): #scheduler
 
             # deep copy the model
             if phase == 'val' and epoch_acc > best_acc:
-                best_acc = epoch_loss
+                best_acc = epoch_acc
                 torch.save(model.state_dict(), best_model_params_path)
             del epoch_loss, running_loss, running_corrects #, epoch_acc
 
@@ -175,4 +177,4 @@ optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-4)
 ### decay learning rate
 #exp_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=10, threshold= 1e-3, factor=0.999)
 
-model = train_model(model, criterion, optimizer, num_epochs=1000) # exp_lr_scheduler
+model = train_model(model, criterion, optimizer, num_epochs=250, continue_training=False) # exp_lr_scheduler
