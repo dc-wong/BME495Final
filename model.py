@@ -114,7 +114,7 @@ class MainModel(nn.Module):
         return y
     
 
-class MultiModel(nn.Module):
+class SingleModel(nn.Module):
     def __init__(self, dropout_prob=0.5):
         super().__init__()
         z = 32
@@ -154,3 +154,16 @@ class MultiModel(nn.Module):
         y = self.last(y)
         y = self.output(y)
         return y
+
+class MultiModel(nn.Module):
+    def __init__(self, weights):
+        super().__init__()
+        z = 32
+        self.pretrained = SingleModel()
+        self.pretrained.load_state_dict(torch.load(weights, weights_only=True))
+        for param in self.pretrained.parameters():
+            param.requires_grad = False
+        self.pretrained.last = Separable(in_channels = 2 * z, out_channels = z *2, kernel_size = 1, padding=0)
+    
+    def forward(self, x):
+        return self.pretrained(x)
