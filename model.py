@@ -164,6 +164,8 @@ class MultiModel(nn.Module):
         for param in self.pretrained.parameters():
             param.requires_grad = False
         self.pretrained.last = Separable(in_channels = 2 * z, out_channels = z *2, kernel_size = 1, padding=0)
+        for param in self.pretrained.last.parameters():
+            param.requires_grad = True
     
     def forward(self, x):
         return self.pretrained(x)
