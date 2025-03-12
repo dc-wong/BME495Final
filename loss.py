@@ -35,27 +35,36 @@ class TverskyLoss(nn.Module):
 
         return tversky_loss.mean(dim=1).mean()  # Average over channels first, then over batch
 
+class ChannelWiseBCELoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+    
+    def forward(self, preds, target):
+        BCEloss = F.binary_cross_entropy(preds, target, reduction='none').sum(dim=(2, 3, 4)).mean(dim=1).mean()
+        return BCEloss
 
-class DiceTverskyHybridLoss(nn.Module):
-    def __init__(self, dice_weight=0.7, tversky_weight=0.3, alpha=0.3, beta=0.7):
+
+class HybridLoss(nn.Module):
+    def __init__(self, weights = [0.5, 0.5], alpha=0.3, beta=0.7):
         super(DiceTverskyHybridLoss, self).__init__()
-        self.dice_loss = DiceLoss()
+        # self.dice_loss = DiceLoss()
         self.tversky_loss = TverskyLoss(alpha, beta)
-        self.dice_weight = dice_weight
-        self.tversky_weight = tversky_weight
+        self.bce = ChannelWiseBCELoss()
+        self.weights = weights
 
     def forward(self, pred, target):
-        dice = self.dice_loss(pred, target)  # Scalar
+        #dice = self.dice_loss(pred, target)  # Scalar
         tversky = self.tversky_loss(pred, target)  # Scalar
+        bce - self.bce(pred, target)
 
-        hybrid_loss = self.dice_weight * dice + self.tversky_weight * tversky
+        hybrid_loss = self.weights[0] * bce + self.weights[1] * dice #+ self.weights[0] * tversky 
         return hybrid_loss
 
 
 class MultiLoss(nn.Module):
     def __init__(self):
         super(MultiLoss, self).__init__()
-        self.dice_tversky_loss = DiceTverskyHybridLoss()
+        self.loss = HybridLoss()
 
     def forward(self, preds, target):
         """
@@ -69,5 +78,5 @@ class MultiLoss(nn.Module):
         # target = F.interpolate(target, size=preds.shape[2:], mode='trilinear', align_corners=False)
         target = target.expand(-1, preds.shape[1], -1, -1, -1)  # Expand to (B, C, D, H, W)
 
-        loss = self.dice_tversky_loss(preds, target)  # Scalar loss
+        loss = self.loss(preds, target)  # Scalar loss
         return loss
