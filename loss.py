@@ -55,7 +55,7 @@ class HybridLoss(nn.Module):
     def forward(self, pred, target):
         #dice = self.dice_loss(pred, target)  # Scalar
         tversky = self.tversky_loss(pred, target)  # Scalar
-        bce - self.bce(pred, target)
+        bce = self.bce(pred, target)
 
         hybrid_loss = self.weights[0] * bce + self.weights[1] * dice #+ self.weights[0] * tversky 
         return hybrid_loss
