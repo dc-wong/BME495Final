@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 class DiceLoss(nn.Module):
     def __init__(self, smooth=1e-6):
-        super(DiceLoss, self).__init__()
+        super().__init__()
         self.smooth = smooth
 
     def forward(self, pred, target):
@@ -20,7 +20,7 @@ class DiceLoss(nn.Module):
 
 class TverskyLoss(nn.Module):
     def __init__(self, smooth=1e-6, alpha=0.3, beta=0.7):
-        super(TverskyLoss, self).__init__()
+        super().__init__()
         self.smooth = smooth
         self.alpha = alpha
         self.beta = beta
@@ -46,7 +46,7 @@ class ChannelWiseBCELoss(nn.Module):
 
 class HybridLoss(nn.Module):
     def __init__(self, weights = [0.5, 0.5], alpha=0.3, beta=0.7):
-        super(DiceTverskyHybridLoss, self).__init__()
+        super().__init__()
         # self.dice_loss = DiceLoss()
         self.tversky_loss = TverskyLoss(alpha, beta)
         self.bce = ChannelWiseBCELoss()
@@ -63,7 +63,7 @@ class HybridLoss(nn.Module):
 
 class MultiLoss(nn.Module):
     def __init__(self):
-        super(MultiLoss, self).__init__()
+        super().__init__()
         self.loss = HybridLoss()
 
     def forward(self, preds, target):
