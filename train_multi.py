@@ -11,7 +11,7 @@ import torch.optim as optim
 # torch._dynamo.config.compile_backend = "nvfuser" 
 
 from loss import MultiLoss
-from model import MultiModel
+from model import SingleModel
 from datasets import TransformedDataset
 from metrics import MultiAccuracy
 import torchio as tio
@@ -29,7 +29,7 @@ print(torch.version.cuda)  # Check CUDA version
 print(torch.backends.cudnn.enabled)
 
 ### from the class to the object
-model = MultiModel()
+model = SingleModel()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if torch.cuda.device_count() > 1:
     print("let's use", torch.cuda.device_count(), "GPUs")
