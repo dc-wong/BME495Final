@@ -117,7 +117,7 @@ class MainModel(nn.Module):
 class SingleModel(nn.Module):
     def __init__(self, dropout_prob=0.5):
         super().__init__()
-        z = 32
+        z = 16
         self.scale = 2
         self.conv1 = ConvSet(1, z, 2 * z)
         self.conv2 = ConvSet(2 * z, 2 * z, 4 * z)
@@ -130,7 +130,7 @@ class SingleModel(nn.Module):
         self.deconv2 = ConvSet(12 * z, 4 * z, 4 * z)
         self.deconv3 = ConvSet(6 * z, 2 * z, 2 * z)
         
-        self.last = Separable(in_channels = 2 * z, out_channels = 1, kernel_size = 1, padding=0) #should be 2*z, but we are just testing to see if it can learn
+        self.last = Separable(in_channels = 2 * z, out_channels = 2 * z, kernel_size = 1, padding=0) #should be 2*z, but we are just testing to see if it can learn
         self.output = nn.Sigmoid()
     
     def forward(self, x):
