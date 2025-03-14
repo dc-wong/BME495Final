@@ -93,4 +93,4 @@ def run_inference(model, image_path, label_path, p_threshold):
 run_inference(model=model, 
               image_path="Cirrhosis_T2_3D/test_images/", 
               label_path="Cirrhosis_T2_3D/test_masks/", 
-              p_threshold=0.05)
+              p_threshold=0.1)
