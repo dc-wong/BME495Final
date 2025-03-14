@@ -58,4 +58,4 @@ def run_inference(model, image_path, label_path): #scheduler
         nib.save(nii_label, os.path.join(base_path, "original.nii.gz"))
 
 
-run_inference(model=model, image_path="Cirrhosis_T2_3D/test_images/", label_path="Cirrhosis_T2_3D/test_labels/") 
+run_inference(model=model, image_path="Cirrhosis_T2_3D/test_images/", label_path="Cirrhosis_T2_3D/test_masks/") 
