@@ -74,7 +74,7 @@ def run_inference(model, image_path, label_path, p_threshold):
             p_value = 1 - stats.t.cdf(t_stat, df=n_channels - 1)
             print(p_value.min(), p_value.mean(), p_value.std(), p_value.max())
             # Create segmentation mask: 1 if p-value is below the threshold, else 0
-            seg = (p_value > p_threshold).astype(np.float32)
+            seg = (p_value < p_threshold).astype(np.float32)
             
             # Save the segmentation mask as a NIfTI file
             nii_seg = nib.Nifti1Image(seg, affine)
@@ -93,4 +93,4 @@ def run_inference(model, image_path, label_path, p_threshold):
 run_inference(model=model, 
               image_path="Cirrhosis_T2_3D/test_images/", 
               label_path="Cirrhosis_T2_3D/test_masks/", 
-              p_threshold=0.20)
+              p_threshold=0.05)
