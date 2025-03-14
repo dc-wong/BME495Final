@@ -65,7 +65,7 @@ def run_inference(model, image_path, label_path, p_threshold):
             # Avoid division by zero by adding a small epsilon
             epsilon = 1e-8
             # Compute t-statistic: (mean - 1) / (std / sqrt(n_channels))
-            t_stat = (mean_voxel - 1) / (std_voxel / (n_channels ** 0.5) + epsilon)
+            t_stat = (mean_voxel - 0.5) / (std_voxel / (n_channels ** 0.5) + epsilon)
             # Convert t_stat to numpy array for SciPy
             t_stat = t_stat.cpu().numpy().squeeze()  # shape: (H, W, D)
             
