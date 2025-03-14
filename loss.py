@@ -40,25 +40,26 @@ class ChannelWiseBCELoss(nn.Module):
         super().__init__()
     
     def forward(self, preds, target):
-        with torch.cuda.amp.autocast(enabled=False):
-            BCEloss = F.binary_cross_entropy(preds, target, reduction='none').sum(dim=(2, 3, 4)).mean(dim=1).mean()
+        preds = preds.float()
+        target = target.float()
+        with torch.amp.autocast("cuda", enabled=False):
+            BCEloss = F.binary_cross_entropy(preds, target, reduction='none').mean(dim=(2, 3, 4)).mean(dim=1).mean()
         return BCEloss
 
 
 class HybridLoss(nn.Module):
-    def __init__(self, weights = [0.5, 0.5], alpha=0.3, beta=0.7):
+    def __init__(self, alpha=0.3, beta=0.7):
         super().__init__()
-        # self.dice_loss = DiceLoss()
-        self.tversky_loss = TverskyLoss(alpha, beta)
+        self.dice_loss = DiceLoss()
+        #self.tversky_loss = TverskyLoss(alpha, beta)
         self.bce = ChannelWiseBCELoss()
-        self.weights = weights
-
+        
     def forward(self, pred, target):
-        #dice = self.dice_loss(pred, target)  # Scalar
-        tversky = self.tversky_loss(pred, target)  # Scalar
+        dice = self.dice_loss(pred, target)  # Scalar
+        #tversky = self.tversky_loss(pred, target)  # Scalar
         bce = self.bce(pred, target)
 
-        hybrid_loss = self.weights[0] * bce + self.weights[1] * dice #+ self.weights[0] * tversky 
+        hybrid_loss = bce +  dice # tversky 
         return hybrid_loss
 
 
