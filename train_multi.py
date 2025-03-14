@@ -38,7 +38,7 @@ model.to(device)
 
 
 
-test_image = torch.rand(4, 1, 320, 320, 32).to(device)
+test_image = torch.rand(8, 1, 320, 320, 32).to(device)
 output = model(test_image)
 print(output.shape)
 print(output.min(), output.max())
@@ -47,9 +47,9 @@ torch.cuda.empty_cache()
 
 transform = tio.Compose([
     #tio.ZNormalization(include=['image']),  # Normalize intensity only on the image
+    tio.RandomBiasField(coefficients = 0.5, order = 3, include=['image']),
     tio.RandomAffine(scales=(0.9, 1.1), degrees=10, translation=(10, 10, 10), include=['image','label']),  # Apply only to the image
     tio.RandomElasticDeformation(num_control_points=8, max_displacement=4, locked_borders=2, p=0.5, include=['image','label']),  # Elastic transform
-    tio.RandomBiasField(coefficients = 0.5, order = 3),
     #tio.RandomFlip(axes=(0, 1, 2), p=0.5, include=['image','label'])  # Flip along random axes
 ])
 
@@ -66,8 +66,8 @@ valset = TransformedDataset(image_dir = os.path.abspath("Cirrhosis_T2_3D/valid_i
 #train_loader = tio.SubjectsLoader(train_queue, batch_size = 16, shuffle = True)
 #val_loader = torch.utils.data.DataLoader(val_queue, batch_size = 4)
 #val_loader = tio.SubjectsLoader(val_queue, batch_size = 16, shuffle = True)
-train_loader = tio.SubjectsLoader(trainset, batch_size = 4, shuffle = True) # batch size is 1 because of varying sizes of MRI
-val_loader = tio.SubjectsLoader(valset, batch_size = 4, shuffle = True) # batch size is 1 because of varying sizes of MRI
+train_loader = tio.SubjectsLoader(trainset, batch_size = 8, shuffle = True) # batch size is 1 because of varying sizes of MRI
+val_loader = tio.SubjectsLoader(valset, batch_size = 8, shuffle = True) # batch size is 1 because of varying sizes of MRI
 
 
 
@@ -91,7 +91,7 @@ def train_model(model, criterion, optimizer, num_epochs=25, continue_training = 
         model.load_state_dict(torch.load(best_model_params_path, weights_only=True))
     best_acc = 0.0
     torch.save(model.state_dict(), best_model_params_path)
-    scaler = torch.amp.GradScaler("cuda")
+    #scaler = torch.amp.GradScaler("cuda")
     for epoch in range(num_epochs):
         print(f'Epoch {epoch}/{num_epochs - 1}')
         print('-' * 10)
@@ -122,22 +122,22 @@ def train_model(model, criterion, optimizer, num_epochs=25, continue_training = 
                 # forward
                 # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
-                    with torch.autocast(device_type="cuda", dtype=torch.float16):
+                   # with torch.autocast(device_type="cuda", dtype=torch.float16):
 
-                        outputs = model(inputs)
-                        loss = criterion(outputs, labels)
+                    outputs = model(inputs)
+                    loss = criterion(outputs, labels)
 
                     # backward + optimize only if in training phase
                     if phase == 'train':
-                        scaler.scale(loss).backward()  # Use scaled gradients
-                            # loss.backward()
+                        #scaler.scale(loss).backward()  # Use scaled gradients
+                        loss.backward()
                             # optimizer.step()
                             # if (batch_idx + 1) % accumulation_steps == 0:
                             #     optimizer.step()  # Only step optimizer every X steps
                         #     # zero the parameter gradients
-                        scaler.step(optimizer)  # Step optimizer
-                        scaler.update()
-                            #     optimizer.step()
+                        #scaler.step(optimizer)  # Step optimizer
+                        #scaler.update()
+                        optimizer.step()
                             #     optimizer.zero_grad()
 
                 # statistics
@@ -173,7 +173,7 @@ def train_model(model, criterion, optimizer, num_epochs=25, continue_training = 
 ### Why cross entropy loss?
 criterion = MultiLoss()
 ### SGD, Adam, RMSprop, ... AdamW
-optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-4)
+optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-2)
 ### decay learning rate
 #exp_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=10, threshold= 1e-3, factor=0.999)
 
