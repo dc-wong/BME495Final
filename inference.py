@@ -29,10 +29,10 @@ if torch.cuda.device_count() > 1:
 model.to(device)
 
 
-def run_inference(model, image_path, label_path): #scheduler
+def run_inference(model, image_path, label_path, threshold): #scheduler
     cropping = tio.CropOrPad((320,320,32), padding_mode=0)
     for img_path in tqdm(os.listdir(image_path)):
-        base_path = os.path.join("generated", img_path[:-7])
+        base_path = os.path.join("generated_" + str(int(10*threshold)), img_path[:-7])
         os.makedirs(base_path, exist_ok=False)
 
         nii_img = nib.load(os.path.join(image_path, img_path))
@@ -45,7 +45,7 @@ def run_inference(model, image_path, label_path): #scheduler
             outputs = model(img_tensor)
             for channel in range(outputs.shape[1]):
                 seg = outputs[0][channel]
-                seg = (seg > 0.5).float().clone().detach().cpu().numpy()
+                seg = (seg > threshold).float().clone().detach().cpu().numpy()
                 nii_seg = nib.Nifti1Image(seg, affine)
                 nib.save(nii_seg, os.path.join(base_path, f"{channel + 1}.nii.gz"))
 
@@ -58,4 +58,4 @@ def run_inference(model, image_path, label_path): #scheduler
         nib.save(nii_label, os.path.join(base_path, "original.nii.gz"))
 
 
-run_inference(model=model, image_path="Cirrhosis_T2_3D/test_images/", label_path="Cirrhosis_T2_3D/test_masks/") 
+run_inference(model=model, image_path="Cirrhosis_T2_3D/test_images/", label_path="Cirrhosis_T2_3D/test_masks/", threshold = 0.6) 
