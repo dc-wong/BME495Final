@@ -62,7 +62,6 @@ def run_inference(model, image_path, label_path, p_threshold):
             # Compute mean and std across channels for each voxel
             mean_voxel = outputs.mean(dim=1)  # shape: (1, H, W, D)
             std_voxel = outputs.std(dim=1)    # shape: (1, H, W, D)
-            
             # Avoid division by zero by adding a small epsilon
             epsilon = 1e-8
             # Compute t-statistic: (mean - 1) / (std / sqrt(n_channels))
@@ -72,7 +71,7 @@ def run_inference(model, image_path, label_path, p_threshold):
             
             # Compute one-sided p-value (probability that mean > 1)
             # degrees of freedom = n_channels - 1
-            p_value = 1 - stats.t.cdf(t_stat, df=n_channels - 1)
+            p_value = stats.t.pdf(t_stat, df=n_channels - 1)
             print(p_value.min(), p_value.mean(), p_value.std(), p_value.max())
             # Create segmentation mask: 1 if p-value is below the threshold, else 0
             seg = (p_value > p_threshold).astype(np.float32)
