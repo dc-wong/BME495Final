@@ -71,7 +71,7 @@ def run_inference(model, image_path, label_path, p_threshold):
             
             # Compute one-sided p-value (probability that mean > 1)
             # degrees of freedom = n_channels - 1
-            p_value = stats.t.pdf(t_stat, df=n_channels - 1)
+            p_value = 1 - stats.t.cdf(t_stat, df=n_channels - 1)
             print(p_value.min(), p_value.mean(), p_value.std(), p_value.max())
             # Create segmentation mask: 1 if p-value is below the threshold, else 0
             seg = (p_value > p_threshold).astype(np.float32)
