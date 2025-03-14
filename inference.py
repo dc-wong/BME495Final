@@ -51,9 +51,9 @@ def run_inference(model, image_path, label_path): #scheduler
 
         nii_label = nib.load(os.path.join(label_path, img_path))
         affine = nii_label.affine
-        label_data = nii_img.get_fdata()
+        label_data = nii_label.get_fdata()
         label_tensor = torch.tensor(label_data).unsqueeze(0)
-        label_data = cropping(label_tensor).float().unsqueeze(0).numpy()
+        label_data = cropping(label_tensor).squeeze().numpy()
         nii_label = nib.Nifti1Image(label_data, affine)
         nib.save(nii_label, os.path.join(base_path, "original.nii.gz"))
 
