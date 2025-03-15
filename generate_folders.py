@@ -89,7 +89,7 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                 for d in range(outputs.shape[4]):
                     mean_slice = mean_voxel[ :, :, d]  # Shape: (H, W)
                     std_slice = std_voxel[ :, :, d]    # Shape: (H, W)
-                    pval_slice = p_value[ :, :, d]     # Shape: (H, W)
+                    pval_slice = t_stat[ :, :, d]     # Shape: (H, W)
                     #print(mean_slice.shape)
                     os.makedirs(os.path.join(base_path, "heatmaps_mean"), exist_ok=True)
                     os.makedirs(os.path.join(base_path, "heatmaps_std"), exist_ok=True)
