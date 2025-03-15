@@ -34,7 +34,7 @@ model.to(device)
 def save_heatmap(image, save_path):
     """Save a 2D heatmap as a JPG image."""
     fig, ax = plt.subplots(figsize=(3.2, 3.2), dpi=100) 
-    ax.imshow(image, cmap='jet', interpolation='nearest')
+    ax.imshow(image, cmap='jet', interpolation='nearest', vmin = 0, vmax = 1)
     ax.axis('off')  # Remove axes for cleaner images
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
     fig.savefig(save_path, bbox_inches='tight', pad_inches=0, dpi=100)
@@ -53,12 +53,12 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
         affine = nii_img.affine
         img_data = nii_img.get_fdata()
         img_tensor = torch.tensor(img_data).unsqueeze(0)
-        img_tensor = cropping(img_tensor).float().unsqueeze(0).numpy()
+        img_tensor = cropping(img_tensor).float().squeeze().numpy()
         nii_img_cropped = nib.Nifti1Image(img_tensor, affine)
         nib.save(nii_img_cropped, os.path.join(base_path, "mri.nii.gz"))
         img_tensor = torch.tensor(img_tensor).to(device)
         with torch.no_grad():
-            outputs = model(img_tensor)  # outputs shape: (1, n_channels, H, W, D)
+            outputs = model(img_tensor.unsqueeze(0).unsqueeze(0))  # outputs shape: (1, n_channels, H, W, D)
             #outputs = outputs.cpu().detach().numpy()
             if mode == "stat":
                 n_channels = outputs.shape[1]
@@ -132,6 +132,8 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
         row_name = f"{img_filename} | mode: {mode}, threshold: {threshold}"
         
         results[row_name] = {
+            "mode": mode,
+            "threshold": threshold,
             "Jaccard Index": jaccard,
             "Dice": dice,
             "Precision": precision,
