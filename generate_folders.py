@@ -70,7 +70,7 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                 # Compute t-statistic: (mean - 1) / (std / sqrt(n_channels))
                 t_stat = (mean_voxel - 0.5) / (std_voxel / (n_channels ** 0.5) + epsilon)
                 # Convert t_stat to numpy array for SciPy
-                t_stat = t_stat  # shape: (H, W, D)
+                # t_stat = t_stat  # shape: (H, W, D)
                 
                 # Compute one-sided p-value (probability that mean > 1)
                 # degrees of freedom = n_channels - 1
@@ -81,10 +81,11 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                 mean_std = mean_voxel.std()
                 std_mean = std_voxel.mean()
                 std_std = std_voxel.std()
-                pval_mean = p_value.mean()
-                pval_std = p_value.std()
+                pval_mean = t_stat.mean()
+                pval_std = t_stat.std()
                 mean_voxel = (mean_voxel - np.min(mean_voxel))/(np.max(mean_voxel) - np.min(mean_voxel))
-                mean_voxel = (std_voxel - np.min(std_voxel))/(np.max(std_voxel) - np.min(std_voxel))
+                std_voxel = (std_voxel - np.min(std_voxel))/(np.max(std_voxel) - np.min(std_voxel))
+                t_stat = (t_stat - np.min(t_stat))/(np.max(t_stat) - np.min(t_stat))
                 for d in range(outputs.shape[4]):
                     mean_slice = mean_voxel[ :, :, d]  # Shape: (H, W)
                     std_slice = std_voxel[ :, :, d]    # Shape: (H, W)
