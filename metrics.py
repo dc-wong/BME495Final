@@ -68,54 +68,34 @@ def MultiAccuracy(preds, target, weights=None):
     return torch.dot(weights, metrics)
 
 def ASSD(preds, target):
-    preds = preds.float()
-    target = target.float()
+    
 
-    batch_size = preds.shape[0]
-    assd_list = []
+    pred_surface = torch.nonzero(preds)
+    target_surface = torch.nonzero(target)
 
-    for i in range(batch_size):
-        pred_surface = torch.nonzero(preds[i])
-        target_surface = torch.nonzero(target[i])
-
-        if pred_surface.numel() == 0 or target_surface.numel() == 0:
-            assd_list.append(torch.tensor(float('inf'), device=preds.device))
-            continue
-
+    with torch.no_grad(): 
         # Compute distances
         dists_pred_to_target = torch.cdist(pred_surface.float(), target_surface.float(), p=2)
         dists_target_to_pred = torch.cdist(target_surface.float(), pred_surface.float(), p=2)
 
         # Compute ASSD (mean of min distances)
-        assd = (dists_pred_to_target.min(dim=1)[0].mean() + dists_target_to_pred.min(dim=1)[0].mean()) / 2
-        assd_list.append(assd)
-
-    return torch.stack(assd_list).mean()
+    assd = (dists_pred_to_target.min(dim=1)[0].mean() + dists_target_to_pred.min(dim=1)[0].mean()) / 2
+        
+    return assd
 
 def HD95(preds, target):
     """
     Computes the 95th percentile of the Hausdorff Distance (HD95).
     """
-    preds = preds.float()
-    target = target.float()
+    pred_surface = torch.nonzero(preds)
+    target_surface = torch.nonzero(target)
 
-    batch_size = preds.shape[0]
-    hd95_list = []
-
-    for i in range(batch_size):
-        pred_surface = torch.nonzero(preds[i])
-        target_surface = torch.nonzero(target[i])
-
-        if pred_surface.numel() == 0 or target_surface.numel() == 0:
-            hd95_list.append(torch.tensor(float('inf'), device=preds.device))
-            continue
-
+        
         # Compute pairwise distances efficiently with PyTorch
+    with torch.no_grad():
         dists_pred_to_target = torch.cdist(pred_surface.float(), target_surface.float(), p=2)
         dists_target_to_pred = torch.cdist(target_surface.float(), pred_surface.float(), p=2)
 
         # Get the 95th percentile
-        hd95 = torch.quantile(torch.cat([dists_pred_to_target.min(dim=1)[0], dists_target_to_pred.min(dim=1)[0]]), 0.95)
-        hd95_list.append(hd95)
-
-    return torch.stack(hd95_list).mean()
+    hd95 = torch.quantile(torch.cat([dists_pred_to_target.min(dim=1)[0], dists_target_to_pred.min(dim=1)[0]]), 0.95)
+    return hd95

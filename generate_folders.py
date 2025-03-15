@@ -45,7 +45,7 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
     cropping = tio.CropOrPad((320, 320, 32), padding_mode=0)
     
     for img_filename in tqdm(os.listdir(image_path)):
-        base_path = os.path.join("results/generated_" + str(int(threshold * 100)), img_filename[:-7])
+        base_path = os.path.join("results/generated_" + str(mode) + str(int(threshold * 100)), img_filename[:-7])
         os.makedirs(base_path, exist_ok=True)
         
         # Load and process image
@@ -53,41 +53,52 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
         affine = nii_img.affine
         img_data = nii_img.get_fdata()
         img_tensor = torch.tensor(img_data).unsqueeze(0)
-        img_tensor = cropping(img_tensor).float().unsqueeze(0).to(device)
+        img_tensor = cropping(img_tensor).float().unsqueeze(0).numpy()
         nii_img_cropped = nib.Nifti1Image(img_tensor, affine)
         nib.save(nii_img_cropped, os.path.join(base_path, "mri.nii.gz"))
-        
+        img_tensor = torch.tensor(img_tensor).to(device)
         with torch.no_grad():
             outputs = model(img_tensor)  # outputs shape: (1, n_channels, H, W, D)
-            
+            #outputs = outputs.cpu().detach().numpy()
             if mode == "stat":
                 n_channels = outputs.shape[1]
                 # Compute mean and std across channels for each voxel
-                mean_voxel = outputs.mean(dim=1)  # shape: (1, H, W, D)
-                std_voxel = outputs.std(dim=1)    # shape: (1, H, W, D)
+                mean_voxel = outputs.mean(dim=1).squeeze().cpu().detach().numpy()  # shape: (1, H, W, D)
+                std_voxel = outputs.std(dim=1).squeeze().cpu().detach().numpy()    # shape: (1, H, W, D)
                 # Avoid division by zero by adding a small epsilon
                 epsilon = 1e-8
                 # Compute t-statistic: (mean - 1) / (std / sqrt(n_channels))
                 t_stat = (mean_voxel - 0.5) / (std_voxel / (n_channels ** 0.5) + epsilon)
                 # Convert t_stat to numpy array for SciPy
-                t_stat = t_stat.cpu().numpy().squeeze()  # shape: (H, W, D)
+                t_stat = t_stat  # shape: (H, W, D)
                 
                 # Compute one-sided p-value (probability that mean > 1)
                 # degrees of freedom = n_channels - 1
                 p_value = 1 - stats.t.cdf(t_stat, df=n_channels - 1)
 
-                print(p_value.min(), p_value.mean(), p_value.std(), p_value.max())
-
-                for d in range(outputs.shape[3]):
+                #print(p_value.min(), p_value.mean(), p_value.std(), p_value.max())
+                mean_mean = mean_voxel.mean()
+                mean_std = mean_voxel.std()
+                std_mean = std_voxel.mean()
+                std_std = std_voxel.std()
+                pval_mean = p_value.mean()
+                pval_std = p_value.std()
+                mean_voxel = (mean_voxel - np.min(mean_voxel))/(np.max(mean_voxel) - np.min(mean_voxel))
+                mean_voxel = (std_voxel - np.min(std_voxel))/(np.max(std_voxel) - np.min(std_voxel))
+                for d in range(outputs.shape[4]):
                     mean_slice = mean_voxel[ :, :, d]  # Shape: (H, W)
                     std_slice = std_voxel[ :, :, d]    # Shape: (H, W)
                     pval_slice = p_value[ :, :, d]     # Shape: (H, W)
-
+                    #print(mean_slice.shape)
+                    os.makedirs(os.path.join(base_path, "heatmaps_mean"), exist_ok=True)
+                    os.makedirs(os.path.join(base_path, "heatmaps_std"), exist_ok=True)
+                    os.makedirs(os.path.join(base_path, "heatmaps_pval"), exist_ok=True)
                     save_heatmap(mean_slice, os.path.join(base_path, "heatmaps_mean", f"mean_{d}.jpg"))
                     save_heatmap(std_slice, os.path.join(base_path, "heatmaps_std", f"std_{d}.jpg"))
                     save_heatmap(pval_slice, os.path.join(base_path, "heatmaps_pval", f"pval_{d}.jpg"))
             elif mode == "avg":
-                p_value = outputs.mean(dim=1)
+                p_value = outputs.mean(dim=1).squeeze().cpu().detach().numpy()
+                mean_mean, mean_std, std_mean, std_std, pval_mean, pval_std = [None] * 6
             else:
                 raise Exception("mode is either avg or stat")
             
@@ -107,15 +118,16 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
         nii_label_cropped = nib.Nifti1Image(label_data_cropped, affine_label)
         nib.save(nii_label_cropped, os.path.join(base_path, "mask.nii.gz"))
 
+        #print(seg.shape, label_data_cropped.shape)
         preds = torch.tensor(seg).unsqueeze(0).unsqueeze(0).to(device)
         target = torch.tensor(label_data_cropped).unsqueeze(0).unsqueeze(0).to(device)
-        
-        jaccard = JaccardIndex(preds, target).item()
-        dice = Dice(preds, target).item()
-        precision = Precision(preds, target).item()
-        recall = Recall(preds, target).item()
-        assd = ASSD(preds, target).item()
-        hd95 = HD95(preds, target).item()
+        with torch.no_grad():
+            jaccard = JaccardIndex(preds, target).item()
+            dice = Dice(preds, target).item()
+            precision = Precision(preds, target).item()
+            recall = Recall(preds, target).item()
+            #assd = ASSD(preds, target).item()
+            #hd95 = HD95(preds, target).item()
         
         row_name = f"{img_filename} | mode: {mode}, threshold: {threshold}"
         
@@ -124,9 +136,16 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
             "Dice": dice,
             "Precision": precision,
             "Recall": recall,
-            "ASSD": assd,
-            "HD95": hd95
+            "Mean of Mean": mean_mean,
+            "Std of Mean": mean_std,
+            "Mean of Std": std_mean,
+            "Std of Std": std_std,
+            "Mean of Pval": pval_mean,
+            "Std of Pval": pval_std,
+            #"ASSD": assd,
+            #"HD95": hd95
         }
+    return results
 
 results = {}
 # Example usage with a p-value threshold (for example, 0.05)

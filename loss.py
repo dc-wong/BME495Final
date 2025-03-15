@@ -30,7 +30,7 @@ class TverskyLoss(nn.Module):
         FP = torch.sum(pred * (1 - target), dim=(2, 3, 4))
         FN = torch.sum((1 - pred) * target, dim=(2, 3, 4))
 
-        tversky_index = (TP + self.smooth) / (TP + self.alpha * FP + self.beta * FN + self.smooth)
+        tversky_index = TP / (TP + self.alpha * FP + self.beta * FN + self.smooth)
         tversky_loss = 1 - tversky_index  # Shape: (B, C), per-channel loss
 
         return tversky_loss.mean(dim=1).mean()  # Average over channels first, then over batch
@@ -40,10 +40,7 @@ class ChannelWiseBCELoss(nn.Module):
         super().__init__()
     
     def forward(self, preds, target):
-        preds = preds.float()
-        target = target.float()
-        with torch.amp.autocast("cuda", enabled=False):
-            BCEloss = F.binary_cross_entropy(preds, target, reduction='none').mean(dim=(2, 3, 4)).mean(dim=1).mean()
+        BCEloss = F.binary_cross_entropy(preds, target, reduction='none').mean(dim=(2, 3, 4)).mean(dim=1).mean()
         return BCEloss
 
 
@@ -59,7 +56,7 @@ class HybridLoss(nn.Module):
         #tversky = self.tversky_loss(pred, target)  # Scalar
         bce = self.bce(pred, target)
 
-        hybrid_loss = bce +  dice # tversky 
+        hybrid_loss = bce + dice
         return hybrid_loss
 
 

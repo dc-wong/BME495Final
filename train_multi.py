@@ -89,7 +89,7 @@ def train_model(model, criterion, optimizer, num_epochs=25, continue_training = 
     best_model_params_path = os.path.join('weights', 'base_3d_unet.pt')
     if continue_training:
         model.load_state_dict(torch.load(best_model_params_path, weights_only=True))
-    best_acc = 0.0
+    best_acc = float('inf')
     torch.save(model.state_dict(), best_model_params_path)
     #scaler = torch.amp.GradScaler("cuda")
     for epoch in range(num_epochs):
@@ -157,8 +157,8 @@ def train_model(model, criterion, optimizer, num_epochs=25, continue_training = 
             print(f'{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
 
             # deep copy the model
-            if phase == 'val' and epoch_acc > best_acc:
-                best_acc = epoch_acc
+            if phase == 'val' and epoch_loss < best_acc:
+                best_acc = epoch_loss
                 torch.save(model.state_dict(), best_model_params_path)
             del epoch_loss, running_loss, running_corrects #, epoch_acc
 
@@ -173,8 +173,8 @@ def train_model(model, criterion, optimizer, num_epochs=25, continue_training = 
 ### Why cross entropy loss?
 criterion = MultiLoss()
 ### SGD, Adam, RMSprop, ... AdamW
-optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-2)
+optimizer = optim.Adam(model.parameters(), lr=5e-5, weight_decay=1e-2)
 ### decay learning rate
 #exp_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=10, threshold= 1e-3, factor=0.999)
 
-model = train_model(model, criterion, optimizer, num_epochs=250, continue_training=False) # exp_lr_scheduler
+model = train_model(model, criterion, optimizer, num_epochs=250, continue_training=False) # exp_lr_schedulr
