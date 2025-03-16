@@ -26,7 +26,7 @@ if torch.cuda.device_count() > 1:
     model = nn.DataParallel(model)
     model.load_state_dict(torch.load("weights/base_3d_unet.pt", weights_only=True))
 model.to(device)
-
+model.eval()
 
 
 
