@@ -85,7 +85,8 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                 mean_voxel = (mean_voxel - np.min(mean_voxel))/(np.max(mean_voxel) - np.min(mean_voxel) + 1e-8)
                 std_voxel = (std_voxel - np.min(std_voxel))/(np.max(std_voxel) - np.min(std_voxel) + 1e-8)
                 t_stat = (t_stat - np.min(t_stat))/(np.max(t_stat) - np.min(t_stat) + 1e-8)
-                seg = (mean_voxel > threshold).astype(np.float32) * (std_voxel > threshold).astype(np.float32)
+                seg = (mean_voxel > threshold).astype(np.float32) - (std_voxel > threshold).astype(np.float32)
+                seg[seg < 0] = 0
                 for d in range(outputs.shape[4]):
                     mean_slice = mean_voxel[ :, :, d]  # Shape: (H, W)
                     std_slice = std_voxel[ :, :, d]    # Shape: (H, W)
