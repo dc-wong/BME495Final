@@ -47,7 +47,7 @@ def run_inference(model, image_path, label_path, threshold, mode, results, secon
     cropping = tio.CropOrPad((320, 320, 32), padding_mode=0)
     
     for img_filename in tqdm(os.listdir(image_path)):
-        base_path = os.path.join("results/generated_" + str(mode) + str(int(threshold * 100)), img_filename[:-7])
+        base_path = os.path.join("results/generated_" + str(mode) + str(int(threshold * 100)) + str(int(secondary * 100)), img_filename[:-7])
         os.makedirs(base_path, exist_ok=True)
         
         # Load and process image
