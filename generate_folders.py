@@ -52,6 +52,7 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
         nii_img = nib.load(os.path.join(image_path, img_filename))
         affine = nii_img.affine
         img_data = nii_img.get_fdata()
+        shape = img_data.shape
         img_tensor = torch.tensor(img_data).unsqueeze(0)
         img_tensor = cropping(img_tensor).float().squeeze().numpy()
         nii_img_cropped = nib.Nifti1Image(img_tensor, affine)
@@ -136,6 +137,9 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
         
         results[row_name] = {
             "mode": mode,
+            "height" : shape[0],
+            "depth" : shape[2],
+            "width" : shape[1],
             "threshold": threshold,
             "Jaccard Index": jaccard,
             "Dice": dice,
@@ -167,6 +171,9 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                 row_name_ch = f"{img_filename}_Ch{ch} | mode: {mode}, threshold: {threshold}"
                 results[row_name_ch] = {
                     "mode": f"{mode} ch{ch}",
+                    "height" : shape[0],
+                    "depth" : shape[2],
+                    "width" : shape[1],
                     "threshold": threshold,
                     "Jaccard Index": jaccard_ch,
                     "Dice": dice_ch,
