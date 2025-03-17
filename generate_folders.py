@@ -135,7 +135,7 @@ def run_inference(model, image_path, label_path, threshold, mode, results, secon
             #assd = ASSD(preds, target).item()
             #hd95 = HD95(preds, target).item()
         
-        row_name = f"{img_filename} | mode: {mode}, threshold: {threshold}"
+        row_name = f"{img_filename} | mode: {mode}, threshold: {threshold}, secondary: {secondary}"
         
         results[row_name] = {
             "mode": mode,
@@ -172,7 +172,7 @@ def run_inference(model, image_path, label_path, threshold, mode, results, secon
                 precision_ch = Precision(preds_ch, target).item()
                 recall_ch = Recall(preds_ch, target).item()
 
-                row_name_ch = f"{img_filename}_Ch{ch} | mode: {mode}, threshold: {threshold}"
+                row_name_ch = f"{img_filename}_Ch{ch} | mode: {mode}, threshold: {threshold}, secondary: {secondary}"
                 results[row_name_ch] = {
                     "mode": f"{mode} ch{ch}",
                     "height" : shape[0],
