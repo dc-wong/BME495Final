@@ -68,13 +68,13 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                 # Avoid division by zero by adding a small epsilon
                 epsilon = 1e-8
                 # Compute t-statistic: (mean - 1) / (std / sqrt(n_channels))
-                t_stat = (mean_voxel - 1.0) / (std_voxel / (n_channels ** 0.5) + epsilon)
+                t_stat = (mean_voxel - 0.5) / (std_voxel / (n_channels ** 0.5) + epsilon)
                 # Convert t_stat to numpy array for SciPy
                 # t_stat = t_stat  # shape: (H, W, D)
                 
                 # Compute one-sided p-value (probability that mean > 1)
                 # degrees of freedom = n_channels - 1
-                p_value = 2 * (1 - stats.t.cdf(t_stat, df=n_channels - 1))
+                p_value = (1 - stats.t.cdf(t_stat, df=n_channels - 1))
 
                 #print(p_value.min(), p_value.mean(), p_value.std(), p_value.max())
                 mean_mean = mean_voxel.mean()
