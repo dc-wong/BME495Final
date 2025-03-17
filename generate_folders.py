@@ -164,7 +164,7 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
 
                 row_name_ch = f"{img_filename}_Ch{ch} | mode: {mode}, threshold: {threshold}"
                 results[row_name_ch] = {
-                    "mode": mode,
+                    "mode": f"{mode} ch{ch}",
                     "threshold": threshold,
                     "Jaccard Index": jaccard_ch,
                     "Dice": dice_ch,
