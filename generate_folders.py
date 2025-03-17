@@ -74,8 +74,8 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                 
                 # Compute one-sided p-value (probability that mean > 1)
                 # degrees of freedom = n_channels - 1
-                p_value = 2 * (1 - stats.t.cdf(t_stat, df=n_channels - 1))
-
+                #p_value = 2 * (1 - stats.t.cdf(t_stat, df=n_channels - 1))
+                seg = (mean_voxel > threshold).astype(np.float32) * (std_voxel > threshold).astype(np.float32)
                 #print(p_value.min(), p_value.mean(), p_value.std(), p_value.max())
                 mean_mean = mean_voxel.mean()
                 mean_std = mean_voxel.std()
@@ -100,11 +100,12 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
             elif mode == "avg":
                 p_value = outputs.mean(dim=1).squeeze().cpu().detach().numpy()
                 mean_mean, mean_std, std_mean, std_std, pval_mean, pval_std = [None] * 6
+                seg = (p_value > threshold).astype(np.float32)
             else:
                 raise Exception("mode is either avg or stat")
             
             # Create segmentation mask: 1 if p-value is below the threshold, else 0
-            seg = (p_value > threshold).astype(np.float32)
+            
             
             # Save the segmentation mask as a NIfTI file
             nii_seg = nib.Nifti1Image(seg, affine)
@@ -191,30 +192,30 @@ results = run_inference(model=model,
               threshold=0.5,
               mode="avg",
               results=results)
-results = run_inference(model=model, 
-              image_path="Cirrhosis_T2_3D/test_images/", 
-              label_path="Cirrhosis_T2_3D/test_masks/", 
-              threshold=0.75,
-              mode="avg",
-              results=results)
+#results = run_inference(model=model, 
+#              image_path="Cirrhosis_T2_3D/test_images/", 
+#              label_path="Cirrhosis_T2_3D/test_masks/", 
+#              threshold=0.75,
+#              mode="avg",
+#              results=results)
 results = run_inference(model=model, 
               image_path="Cirrhosis_T2_3D/test_images/", 
               label_path="Cirrhosis_T2_3D/test_masks/", 
               threshold=0.5,
               mode="stat",
               results=results)
-results = run_inference(model=model, 
-              image_path="Cirrhosis_T2_3D/test_images/", 
-              label_path="Cirrhosis_T2_3D/test_masks/", 
-              threshold=0.05,
-              mode="stat",
-              results=results)
-results = run_inference(model=model, 
-              image_path="Cirrhosis_T2_3D/test_images/", 
-              label_path="Cirrhosis_T2_3D/test_masks/", 
-              threshold=0.1,
-              mode="stat",
-              results=results)
+#results = run_inference(model=model, 
+#              image_path="Cirrhosis_T2_3D/test_images/", 
+#              label_path="Cirrhosis_T2_3D/test_masks/", 
+#              threshold=0.05,
+#              mode="stat",
+#              results=results)
+#results = run_inference(model=model, 
+#              image_path="Cirrhosis_T2_3D/test_images/", 
+#              label_path="Cirrhosis_T2_3D/test_masks/", 
+#              threshold=0.1,
+#              mode="stat",
+#              results=results)
 
 
 
