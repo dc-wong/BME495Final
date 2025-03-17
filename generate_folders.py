@@ -34,7 +34,7 @@ model.eval()
 def save_heatmap(image, save_path):
     """Save a 2D heatmap as a JPG image."""
     fig, ax = plt.subplots(figsize=(3.2, 3.2), dpi=100) 
-    ax.imshow(image, cmap='jet', interpolation='nearest', vmin = 0, vmax = 1)
+    ax.imshow(image.T, cmap='jet', interpolation='nearest', vmin = 0, vmax = 1)
     ax.axis('off')  # Remove axes for cleaner images
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
     fig.savefig(save_path, bbox_inches='tight', pad_inches=0, dpi=100)
