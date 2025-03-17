@@ -75,7 +75,6 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                 # Compute one-sided p-value (probability that mean > 1)
                 # degrees of freedom = n_channels - 1
                 #p_value = 2 * (1 - stats.t.cdf(t_stat, df=n_channels - 1))
-                seg = (mean_voxel > threshold).astype(np.float32) * (std_voxel > threshold).astype(np.float32)
                 #print(p_value.min(), p_value.mean(), p_value.std(), p_value.max())
                 mean_mean = mean_voxel.mean()
                 mean_std = mean_voxel.std()
@@ -86,6 +85,7 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                 mean_voxel = (mean_voxel - np.min(mean_voxel))/(np.max(mean_voxel) - np.min(mean_voxel) + 1e-8)
                 std_voxel = (std_voxel - np.min(std_voxel))/(np.max(std_voxel) - np.min(std_voxel) + 1e-8)
                 t_stat = (t_stat - np.min(t_stat))/(np.max(t_stat) - np.min(t_stat) + 1e-8)
+                seg = (mean_voxel > threshold).astype(np.float32) * (std_voxel > threshold).astype(np.float32)
                 for d in range(outputs.shape[4]):
                     mean_slice = mean_voxel[ :, :, d]  # Shape: (H, W)
                     std_slice = std_voxel[ :, :, d]    # Shape: (H, W)
