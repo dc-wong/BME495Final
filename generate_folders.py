@@ -180,7 +180,7 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                 save_path = os.path.join(base_path, "avg")
                 os.makedirs(save_path, exist_ok=True)  # Ensure directory exists
                 nii_img = nib.Nifti1Image(single_channel_seg, affine)
-                nib.save(nii_img, os.join(save_path, f"{ch}.nii.gz"))
+                nib.save(nii_img, os.path.join(save_path, f"{ch}.nii.gz"))
     return results
 
 results = {}
