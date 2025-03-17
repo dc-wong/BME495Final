@@ -68,13 +68,13 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                 # Avoid division by zero by adding a small epsilon
                 epsilon = 1e-8
                 # Compute t-statistic: (mean - 1) / (std / sqrt(n_channels))
-                t_stat = (mean_voxel - 0.5) / (std_voxel / (n_channels ** 0.5) + epsilon)
+                t_stat = (mean_voxel - 1) / (std_voxel / (n_channels ** 0.5) + epsilon)
                 # Convert t_stat to numpy array for SciPy
                 # t_stat = t_stat  # shape: (H, W, D)
                 
                 # Compute one-sided p-value (probability that mean > 1)
                 # degrees of freedom = n_channels - 1
-                p_value = (1 - stats.t.cdf(t_stat, df=n_channels - 1))
+                p_value = 2 * (1 - stats.t.cdf(t_stat, df=n_channels - 1))
 
                 #print(p_value.min(), p_value.mean(), p_value.std(), p_value.max())
                 mean_mean = mean_voxel.mean()
@@ -104,7 +104,7 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                 raise Exception("mode is either avg or stat")
             
             # Create segmentation mask: 1 if p-value is below the threshold, else 0
-            seg = (p_value < threshold).astype(np.float32)
+            seg = (p_value > threshold).astype(np.float32)
             
             # Save the segmentation mask as a NIfTI file
             nii_seg = nib.Nifti1Image(seg, affine)
@@ -200,7 +200,7 @@ results = run_inference(model=model,
 results = run_inference(model=model, 
               image_path="Cirrhosis_T2_3D/test_images/", 
               label_path="Cirrhosis_T2_3D/test_masks/", 
-              threshold=0.01,
+              threshold=0.5,
               mode="stat",
               results=results)
 results = run_inference(model=model, 
