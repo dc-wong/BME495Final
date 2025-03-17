@@ -59,22 +59,22 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
         img_tensor = torch.tensor(img_tensor).to(device)
         with torch.no_grad():
             outputs = model(img_tensor.unsqueeze(0).unsqueeze(0))  # outputs shape: (1, n_channels, H, W, D)
+            n_channels = outputs.shape[1]
             #outputs = outputs.cpu().detach().numpy()
             if mode == "stat":
-                n_channels = outputs.shape[1]
                 # Compute mean and std across channels for each voxel
                 mean_voxel = outputs.mean(dim=1).squeeze().cpu().detach().numpy()  # shape: (1, H, W, D)
                 std_voxel = outputs.std(dim=1).squeeze().cpu().detach().numpy()    # shape: (1, H, W, D)
                 # Avoid division by zero by adding a small epsilon
                 epsilon = 1e-8
                 # Compute t-statistic: (mean - 1) / (std / sqrt(n_channels))
-                t_stat = (mean_voxel - 0.5) / (std_voxel / (n_channels ** 0.5) + epsilon)
+                t_stat = (mean_voxel - 1.0) / (std_voxel / (n_channels ** 0.5) + epsilon)
                 # Convert t_stat to numpy array for SciPy
                 # t_stat = t_stat  # shape: (H, W, D)
                 
                 # Compute one-sided p-value (probability that mean > 1)
                 # degrees of freedom = n_channels - 1
-                p_value = 1 - stats.t.cdf(t_stat, df=n_channels - 1)
+                p_value = 2 * (1 - stats.t.cdf(t_stat, df=n_channels - 1))
 
                 #print(p_value.min(), p_value.mean(), p_value.std(), p_value.max())
                 mean_mean = mean_voxel.mean()
@@ -83,9 +83,9 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                 std_std = std_voxel.std()
                 pval_mean = t_stat.mean()
                 pval_std = t_stat.std()
-                mean_voxel = (mean_voxel - np.min(mean_voxel))/(np.max(mean_voxel) - np.min(mean_voxel))
-                std_voxel = (std_voxel - np.min(std_voxel))/(np.max(std_voxel) - np.min(std_voxel))
-                t_stat = (t_stat - np.min(t_stat))/(np.max(t_stat) - np.min(t_stat))
+                mean_voxel = (mean_voxel - np.min(mean_voxel))/(np.max(mean_voxel) - np.min(mean_voxel) + 1e-8)
+                std_voxel = (std_voxel - np.min(std_voxel))/(np.max(std_voxel) - np.min(std_voxel) + 1e-8)
+                t_stat = (t_stat - np.min(t_stat))/(np.max(t_stat) - np.min(t_stat) + 1e-8)
                 for d in range(outputs.shape[4]):
                     mean_slice = mean_voxel[ :, :, d]  # Shape: (H, W)
                     std_slice = std_voxel[ :, :, d]    # Shape: (H, W)
@@ -148,6 +148,39 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
             #"ASSD": assd,
             #"HD95": hd95
         }
+
+        # Compute per-channel metrics as separate rows
+        if mode == "avg":
+            for ch in range(n_channels):
+                single_channel = outputs[:, ch, :, :, :].squeeze().cpu().detach().numpy()
+                single_channel_seg = (single_channel > threshold).astype(np.float32)
+
+                preds_ch = torch.tensor(single_channel_seg).unsqueeze(0).unsqueeze(0).to(device)
+                
+                jaccard_ch = JaccardIndex(preds_ch, target).item()
+                dice_ch = Dice(preds_ch, target).item()
+                precision_ch = Precision(preds_ch, target).item()
+                recall_ch = Recall(preds_ch, target).item()
+
+                row_name_ch = f"{img_filename}_Ch{ch} | mode: {mode}, threshold: {threshold}"
+                results[row_name_ch] = {
+                    "mode": mode,
+                    "threshold": threshold,
+                    "Jaccard Index": jaccard_ch,
+                    "Dice": dice_ch,
+                    "Precision": precision_ch,
+                    "Recall": recall_ch,
+                    "Mean of Mean": None,
+                    "Std of Mean": None,
+                    "Mean of Std": None,
+                    "Std of Std": None,
+                    "Mean of Pval": None,
+                    "Std of Pval": None
+                }
+                save_path = os.path.join(base_path, "avg")
+                os.makedirs(save_path, exist_ok=True)  # Ensure directory exists
+                nii_img = nib.Nifti1Image(single_channel_seg, affine)
+                nib.save(nii_img, os.join(save_path, f"{ch}.nii.gz"))
     return results
 
 results = {}
@@ -155,8 +188,20 @@ results = {}
 results = run_inference(model=model, 
               image_path="Cirrhosis_T2_3D/test_images/", 
               label_path="Cirrhosis_T2_3D/test_masks/", 
-              threshold=0.1,
+              threshold=0.5,
               mode="avg",
+              results=results)
+results = run_inference(model=model, 
+              image_path="Cirrhosis_T2_3D/test_images/", 
+              label_path="Cirrhosis_T2_3D/test_masks/", 
+              threshold=0.75,
+              mode="avg",
+              results=results)
+results = run_inference(model=model, 
+              image_path="Cirrhosis_T2_3D/test_images/", 
+              label_path="Cirrhosis_T2_3D/test_masks/", 
+              threshold=0.01,
+              mode="stat",
               results=results)
 results = run_inference(model=model, 
               image_path="Cirrhosis_T2_3D/test_images/", 
