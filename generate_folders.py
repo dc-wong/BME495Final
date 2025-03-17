@@ -40,7 +40,9 @@ def save_heatmap(image, save_path):
     fig.savefig(save_path, bbox_inches='tight', pad_inches=0, dpi=100)
     plt.close(fig)
 
-def run_inference(model, image_path, label_path, threshold, mode, results):
+def run_inference(model, image_path, label_path, threshold, mode, results, secondary = None):
+    if secondary is None:
+       secondary = threshold
     # Define cropping/padding transformation to standard size
     cropping = tio.CropOrPad((320, 320, 32), padding_mode=0)
     
@@ -86,7 +88,7 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                 mean_voxel = (mean_voxel - np.min(mean_voxel))/(np.max(mean_voxel) - np.min(mean_voxel) + 1e-8)
                 std_voxel = (std_voxel - np.min(std_voxel))/(np.max(std_voxel) - np.min(std_voxel) + 1e-8)
                 t_stat = (t_stat - np.min(t_stat))/(np.max(t_stat) - np.min(t_stat) + 1e-8)
-                seg = (mean_voxel > threshold).astype(np.float32) - (std_voxel > threshold).astype(np.float32)
+                seg = (mean_voxel > threshold).astype(np.float32) - (std_voxel > secondary).astype(np.float32)
                 seg[seg < 0] = 0
                 for d in range(outputs.shape[4]):
                     mean_slice = mean_voxel[ :, :, d]  # Shape: (H, W)
@@ -141,6 +143,7 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
             "depth" : shape[2],
             "width" : shape[1],
             "threshold": threshold,
+            "secondary": secondary,
             "Jaccard Index": jaccard,
             "Dice": dice,
             "Precision": precision,
@@ -176,6 +179,7 @@ def run_inference(model, image_path, label_path, threshold, mode, results):
                     "depth" : shape[2],
                     "width" : shape[1],
                     "threshold": threshold,
+                    "secondary": secondary,
                     "Jaccard Index": jaccard_ch,
                     "Dice": dice_ch,
                     "Precision": precision_ch,
@@ -212,6 +216,18 @@ results = run_inference(model=model,
               image_path="Cirrhosis_T2_3D/test_images/", 
               label_path="Cirrhosis_T2_3D/test_masks/", 
               threshold=0.5,
+              mode="stat",
+              results=results)
+results = run_inference(model=model, 
+              image_path="Cirrhosis_T2_3D/test_images/", 
+              label_path="Cirrhosis_T2_3D/test_masks/", 
+              threshold=0.5, secondary=0.25,
+              mode="stat",
+              results=results)
+results = run_inference(model=model, 
+              image_path="Cirrhosis_T2_3D/test_images/", 
+              label_path="Cirrhosis_T2_3D/test_masks/", 
+              threshold=0.5, secondary=0.75,
               mode="stat",
               results=results)
 #results = run_inference(model=model, 
