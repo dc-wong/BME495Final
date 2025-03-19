@@ -1,8 +1,6 @@
 import os
 import torch
 import torch.nn.functional as F
-import numpy as np
-import nibabel as nib
 from tqdm import tqdm
 import torchio as tio
 from torchio import SubjectsDataset, SubjectsLoader
@@ -17,35 +15,26 @@ class TransformedDataset(tio.SubjectsDataset):
         self.cropOrPad = tio.CropOrPad(target_shape, padding_mode = 0, include  = ('image', 'label'))
         self.target_shape = target_shape
 
+        ### ensure that the files are all detected
         assert len(self.image_files) == len(self.label_files), "Mismatch between images and labels"
 
         subjects = []
+        ### load all the subjects and store them
         for img_file, label_file in tqdm(zip(self.image_files, self.label_files)):
             img_path = os.path.join(self.image_dir, img_file)
             label_path = os.path.join(self.label_dir, label_file)
-
             subject = tio.Subject(
                 image=tio.ScalarImage(img_path),
                 label=tio.LabelMap(label_path)
             )
+            ### crop the images to 320x320x32
             subject = self.cropOrPad(subject)
-           #affine = np.eye(4)
-            #affine[:3,:3] = np.diag(subject['image'].spacing)
-            #affine[:3,3] = subject['image'].affine[:3, 3]
-            #resample_transform = tio.Resample(target = (self.target_shape, affine), image_interpolation = 'bspline', label_interpolation = 'label_gaussian')
-            #subject['image'] = resample_transform(subject['image'])
-            #resample_transform_label = tio.Resample(target = subject['image'], label_interpolation = 'nearest')
-            #subject['label'] = resample_transform(subject['label'])
-            #print(subject['label'].data.unique())
-            #subject['label'].set_data((subject['label'].data > 0.5).float())
-            #print(subject['image'].shape, subject['label'].shape)
-            #assert torch.equal(subject['label'].data.unique(), torch.tensor([0,1]).float()), "Labels missing labels 3"
-            #assert subject['image'].shape == (1, 400, 400, 32), "Mismatch shape after transform"
             subjects.append(subject)
-
         super().__init__(subjects)  # Initialize properly
 
     def __getitem__(self, idx):
-        subject = super().__getitem__(idx)  # Ensure transformation returns a `tio.Subject`)
+        ### get the subect
+        subject = super().__getitem__(idx)
+        ### conduct the random transformations on the subject
         subject = self.transform(subject)
         return subject
