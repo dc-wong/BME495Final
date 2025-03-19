@@ -24,78 +24,25 @@ def Recall(preds, target, smooth=1e-6):
     recall = (tp + smooth) / (tp + fn + smooth)
     return recall.mean(dim=1).mean()
 
-def UnifiedAccuracy(preds, target, weights=None):
-    """ Computes a weighted accuracy score per channel, then averages over channels and batch. """
-    if weights is None:
-        weights = torch.Tensor([0.25, 0.25, 0.25, 0.25])
-    device = preds.device
-    weights = weights.to(device)
-
-    J = JaccardIndex(preds, target)
-    D = Dice(preds, target)
-    P = Precision(preds, target)
-    R = Recall(preds, target)
-    
-    metrics = torch.stack([J, D, P, R])
-    return torch.dot(weights, metrics)
-
-def MeanPoolOverChannels(tensor):
-    """ Computes mean pooling over the channel dimension. """
-    return torch.mean(tensor, dim=1, keepdim=True)  # Reduce channel dimension
-
+### find the average accuracy across the 4 metrics
 def MultiAccuracy(preds, target, weights=None):
-    """
-    Computes a weighted average of the Jaccard, Dice, Precision, and Recall metrics.
-    Thresholds predictions at 0.5.
-    """
+    ### weights is the weight given to each metric
     if weights is None:
         weights = torch.Tensor([0.25, 0.25, 0.25, 0.25])
     device = preds.device
     weights = weights.to(device)
     
-    
-    # Ensure target has the same shape as preds
+    ### Ensure target has the same number of channels as preds
     target = target.expand(-1, preds.shape[1], -1, -1, -1)
-    # Threshold predictions to obtain binary outputs
+    ### Threshold predictions to obtain binary outputs
     preds_thresh = (preds > 0.5).float()
-    
+
+    ### calcuate each metric
     J = JaccardIndex(preds_thresh, target)
     D = Dice(preds_thresh, target)
     P = Precision(preds_thresh, target)
     R = Recall(preds_thresh, target)
-    
+
+    ### return the weighted sum of the metrics
     metrics = torch.stack([J, D, P, R])
     return torch.dot(weights, metrics)
-
-def ASSD(preds, target):
-    
-
-    pred_surface = torch.nonzero(preds)
-    target_surface = torch.nonzero(target)
-
-    with torch.no_grad(): 
-        # Compute distances
-        dists_pred_to_target = torch.cdist(pred_surface.float(), target_surface.float(), p=2)
-        dists_target_to_pred = torch.cdist(target_surface.float(), pred_surface.float(), p=2)
-
-        # Compute ASSD (mean of min distances)
-    assd = (dists_pred_to_target.min(dim=1)[0].mean() + dists_target_to_pred.min(dim=1)[0].mean()) / 2
-        
-    return assd
-
-def HD95(preds, target):
-    """
-    Computes the 95th percentile of the Hausdorff Distance (HD95).
-    """
-    pred_surface = torch.nonzero(preds)
-    target_surface = torch.nonzero(target)
-
-        
-        # Compute pairwise distances efficiently with PyTorch
-    with torch.no_grad():
-        dists_pred_to_target = torch.cdist(pred_surface.float(), target_surface.float(), p=2)
-        dists_target_to_pred = torch.cdist(target_surface.float(), pred_surface.float(), p=2)
-
-        # Get the 95th percentile
-    hd95 = torch.quantile(torch.cat([dists_pred_to_target.min(dim=1)[0], dists_target_to_pred.min(dim=1)[0]]), 0.95)
-    return hd95
